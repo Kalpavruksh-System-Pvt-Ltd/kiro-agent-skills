@@ -1,8 +1,7 @@
 # kiro-sales
 
-Kiro Beauty sales assistant. Authenticates with the kiro-agent API server and
-retrieves business data. Use this skill to query sales, inventory, ads, and
-financial data for Kiro Beauty.
+Kiro Beauty sales data. Use this skill to query D2C sales (Shopify) and
+B2B/wholesale sales orders (Zoho Inventory).
 
 ## Connect
 
@@ -50,23 +49,15 @@ If it failed, show the error and stop.
 ## Answer queries
 
 Use `Authorization: Bearer $TOKEN` on all API calls to `$API_BASE`.
-All dates use ISO 8601 format (e.g. `2026-05-01T00:00:00+05:30`). Kiro is based in India (IST).
+All dates: ISO 8601 for Shopify (e.g. `2026-05-01T00:00:00+05:30`), `YYYY-MM-DD` for Zoho.
 
 ### Available endpoints
 
-| Endpoint | Description |
-|---|---|
-| `GET /hello` | Connection test — returns greeting and authenticated email |
-| `GET /shopify/orders` | List recent Shopify orders |
-| `GET /shopify/orders/summary` | Revenue summary (total sales, order count, AOV) |
-| `GET /shopify/products` | Product catalog with variants and inventory |
-| `GET /zoho/inventory/sales-orders` | Zoho Inventory sales orders |
-| `GET /zoho/inventory/purchase-orders` | Zoho Inventory purchase orders |
-| `GET /zoho/inventory/items` | Zoho Inventory items with stock levels |
-| `GET /zoho/inventory/warehouses` | Warehouse locations |
-| `GET /zoho/books/invoices` | Zoho Books invoices |
-| `GET /zoho/books/credit-notes` | Zoho Books credit notes (returns/refunds) |
-| `GET /zoho/books/bills` | Zoho Books bills (expenses/payables) |
+| Endpoint | Source | Description |
+|---|---|---|
+| `GET /shopify/orders` | Shopify | D2C orders (website) |
+| `GET /shopify/orders/summary` | Shopify | Revenue summary (total sales, order count, AOV) |
+| `GET /zoho/inventory/sales-orders` | Zoho | B2B / wholesale sales orders |
 
 ### Endpoint details
 
@@ -90,59 +81,23 @@ All dates use ISO 8601 format (e.g. `2026-05-01T00:00:00+05:30`). Kiro is based 
 
 Returns: `order_count`, `total_revenue`, `average_order_value`, `total_tax`, `total_discounts`, `currency`
 
-**GET /shopify/products**
-
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `status` | `active\|draft\|archived` | `active` | Product status |
-| `limit` | 1–250 | 50 | Max products to return |
-
-**Zoho pagination params** (shared by all Zoho endpoints):
+**GET /zoho/inventory/sales-orders**
 
 | Param | Type | Default | Description |
 |---|---|---|---|
 | `page` | 1+ | 1 | Page number |
 | `per_page` | 1–200 | 50 | Results per page |
-
-**Zoho date/status filters** (shared by sales-orders, purchase-orders, invoices, credit-notes, bills):
-
-| Param | Type | Description |
-|---|---|---|
-| `date_start` | `YYYY-MM-DD` | Filter from this date |
-| `date_end` | `YYYY-MM-DD` | Filter up to this date |
-| `status` | string | Status filter (varies by entity) |
-
-**GET /zoho/inventory/items** additional params:
-
-| Param | Type | Description |
-|---|---|---|
-| `status` | `active\|inactive` | Item status |
-| `search_text` | string | Search by name/SKU |
+| `date_start` | `YYYY-MM-DD` | — | Filter from this date |
+| `date_end` | `YYYY-MM-DD` | — | Filter up to this date |
+| `status` | string | — | Status filter |
 
 ### Query patterns
 
-**Shopify (D2C e-commerce)**
-- "Sales today" → `GET /shopify/orders/summary?created_at_min=<today ISO>`
-- "Orders this week" → `GET /shopify/orders?created_at_min=<monday ISO>`
+- "D2C sales today" → `GET /shopify/orders/summary?created_at_min=<today ISO>`
+- "Online orders this week" → `GET /shopify/orders?created_at_min=<monday ISO>`
 - "Top products" → `GET /shopify/orders?limit=250` then aggregate by item title
 - "Revenue last month" → `GET /shopify/orders/summary?created_at_min=<1st>&created_at_max=<last>`
-- "Show me our products" → `GET /shopify/products`
-- "What's low on stock (Shopify)" → `GET /shopify/products` then filter by low `inventory_quantity`
+- "B2B sales orders this month" → `GET /zoho/inventory/sales-orders?date_start=<1st>&date_end=<today>`
+- "All sales orders" → `GET /zoho/inventory/sales-orders`
 
-**Zoho Inventory (system of record)**
-- "Inventory stock levels" → `GET /zoho/inventory/items`
-- "Low stock items" → `GET /zoho/inventory/items` then filter by low `stock_on_hand`
-- "Recent purchase orders" → `GET /zoho/inventory/purchase-orders`
-- "Sales orders this month" → `GET /zoho/inventory/sales-orders?date_start=<1st>&date_end=<today>`
-- "Our warehouses" → `GET /zoho/inventory/warehouses`
-- "Find item by name" → `GET /zoho/inventory/items?search_text=<query>`
-
-**Zoho Books (accounting)**
-- "Recent invoices" → `GET /zoho/books/invoices`
-- "Unpaid invoices" → `GET /zoho/books/invoices?status=unpaid`
-- "Credit notes / returns" → `GET /zoho/books/credit-notes`
-- "Bills / expenses" → `GET /zoho/books/bills`
-- "Overdue bills" → `GET /zoho/books/bills?status=overdue`
-
-When the user asks for data not yet available (e.g. Meta ads, Google Ads, Zoho Analytics), say:
-> "That integration isn't live yet — it's on the roadmap."
+When the user asks for inventory, stock, products, invoices, bills, or expenses, suggest they use `/kiro-inventory` or `/kiro-finance` instead.
