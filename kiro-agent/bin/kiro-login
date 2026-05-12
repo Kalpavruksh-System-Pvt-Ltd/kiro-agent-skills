@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
 # kiro-login — Authenticate with the kiro-agent API and save your token.
+# Starts a local callback server, opens the browser for Google OAuth,
+# and captures the token automatically (like gcloud auth login).
 #
 # Usage:  ~/.claude/skills/kiro-agent/bin/kiro-login
 
@@ -13,32 +15,75 @@ echo ""
 echo "kiro-agent login"
 echo "================"
 echo ""
-echo "Opening your browser to sign in with Google..."
-echo ""
 
-if command -v open >/dev/null 2>&1; then
-  open "$API_BASE/auth/google"
-elif command -v xdg-open >/dev/null 2>&1; then
-  xdg-open "$API_BASE/auth/google"
-else
-  echo "Open this URL in your browser:"
-  echo "  $API_BASE/auth/google"
-fi
-
-echo "After signing in, your browser will show:"
-echo '  {"token":"eyJhbGci..."}'
-echo ""
-echo "Copy the token value (the long string after \"token\":\")."
-echo ""
-read -r -p "Paste your token: " TOKEN
-
-TOKEN=$(echo "$TOKEN" | tr -d '[:space:]"')
-
-if [ -z "$TOKEN" ]; then
-  echo "No token provided. Login cancelled."
+# Start a one-shot local HTTP server on a random port to capture the token
+# Node.js is required (already a project dependency)
+if ! command -v node >/dev/null 2>&1; then
+  echo "Error: Node.js is required but not found."
   exit 1
 fi
 
+# Find a free port and start the callback server
+TOKEN=$(node -e '
+const http = require("http");
+const url = require("url");
+
+const server = http.createServer((req, res) => {
+  const parsed = url.parse(req.url, true);
+  if (parsed.pathname === "/callback" && parsed.query.token) {
+    res.writeHead(200, { "Content-Type": "text/html" });
+    res.end("<html><body style=\"font-family:system-ui;text-align:center;padding:60px\">" +
+      "<h1>Authenticated!</h1>" +
+      "<p>You can close this tab and return to your terminal.</p>" +
+      "</body></html>");
+    process.stdout.write(parsed.query.token);
+    setTimeout(() => server.close(() => process.exit(0)), 200);
+  } else {
+    res.writeHead(404);
+    res.end("Not found");
+  }
+});
+
+server.listen(0, "127.0.0.1", () => {
+  const port = server.address().port;
+  process.stderr.write("PORT:" + port + "\n");
+});
+
+// Timeout after 120 seconds
+setTimeout(() => {
+  process.stderr.write("Timed out waiting for authentication.\n");
+  process.exit(1);
+}, 120000);
+' 2> >(
+  # Read stderr to get the port, then open the browser
+  while IFS= read -r line; do
+    if [[ "$line" == PORT:* ]]; then
+      PORT="${line#PORT:}"
+      AUTH_URL="$API_BASE/auth/google?cli_port=$PORT"
+      echo "Opening browser for Google sign-in..." >&2
+      echo "" >&2
+      if command -v open >/dev/null 2>&1; then
+        open "$AUTH_URL"
+      elif command -v xdg-open >/dev/null 2>&1; then
+        xdg-open "$AUTH_URL"
+      else
+        echo "Open this URL in your browser:" >&2
+        echo "  $AUTH_URL" >&2
+      fi
+      echo "Waiting for authentication..." >&2
+    else
+      echo "$line" >&2
+    fi
+  done
+))
+
+if [ -z "${TOKEN:-}" ]; then
+  echo ""
+  echo "Login failed — no token received."
+  exit 1
+fi
+
+mkdir -p "$(dirname "$TOKEN_FILE")"
 echo "$TOKEN" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
 
@@ -48,6 +93,7 @@ RESPONSE=$(curl -sf -H "Authorization: Bearer $TOKEN" "$API_BASE/hello" 2>&1 || 
 
 if echo "$RESPONSE" | grep -q "Hello, Kiro"; then
   EMAIL=$(echo "$RESPONSE" | grep -o '"email":"[^"]*"' | cut -d'"' -f4)
+  echo ""
   echo "Authenticated as: $EMAIL"
   echo "Token saved to:   $TOKEN_FILE"
 else
