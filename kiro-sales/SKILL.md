@@ -15,18 +15,16 @@ echo "API_BASE: $API_BASE"
 echo "TOKEN_PRESENT: $([ -n "$TOKEN" ] && echo yes || echo no)"
 ```
 
-## Step 1 — Check authentication
+## Step 1 — Authenticate
 
-If `TOKEN_PRESENT` is `no`:
+If `TOKEN_PRESENT` is `no`, tell the user "Signing you in..." and run:
 
-Tell the user:
-> You need to authenticate first. Run this in your terminal:
-> ```
-> ~/.claude/skills/kiro-agent/bin/kiro-login
-> ```
-> Then invoke `/kiro-sales` again.
+```bash
+~/.claude/skills/kiro-agent/bin/kiro-login
+```
 
-Stop here.
+This opens the browser for Google sign-in and captures the token automatically.
+If it fails, stop and show the error.
 
 ## Step 2 — Verify connection
 
@@ -40,11 +38,12 @@ If the response contains `"Hello, Kiro"`:
 - Greet the user: "Connected to kiro-agent as `<email>`. What would you like to know?"
 - Wait for their query and proceed to Step 3.
 
-If the response is 401 or an error:
+If the response is 401 or an error, tell the user "Token expired, re-authenticating..." and run:
 ```bash
 rm -f "$HOME/.claude/skills/kiro-agent/.kiro-token"
+~/.claude/skills/kiro-agent/bin/kiro-login
 ```
-Tell the user their token has expired and to run `~/.claude/skills/kiro-agent/bin/kiro-login` again. Stop here.
+Then retry Step 2. If it fails again, stop and show the error.
 
 ## Step 3 — Answer queries
 
