@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+#
+# kiro-login — Authenticate with the kiro-agent API and save your token.
+#
+# Usage:  ~/.claude/skills/kiro-agent/bin/kiro-login
+
+set -euo pipefail
+
+TOKEN_FILE="$HOME/.claude/skills/kiro-agent/.kiro-token"
+API_BASE="https://app-service-lmqrue7ola-el.a.run.app"
+
+echo ""
+echo "kiro-agent login"
+echo "================"
+echo ""
+echo "Opening your browser to sign in with Google..."
+echo ""
+
+if command -v open >/dev/null 2>&1; then
+  open "$API_BASE/auth/google"
+elif command -v xdg-open >/dev/null 2>&1; then
+  xdg-open "$API_BASE/auth/google"
+else
+  echo "Open this URL in your browser:"
+  echo "  $API_BASE/auth/google"
+fi
+
+echo "After signing in, your browser will show:"
+echo '  {"token":"eyJhbGci..."}'
+echo ""
+echo "Copy the token value (the long string after \"token\":\")."
+echo ""
+read -r -p "Paste your token: " TOKEN
+
+TOKEN=$(echo "$TOKEN" | tr -d '[:space:]"')
+
+if [ -z "$TOKEN" ]; then
+  echo "No token provided. Login cancelled."
+  exit 1
+fi
+
+echo "$TOKEN" > "$TOKEN_FILE"
+chmod 600 "$TOKEN_FILE"
+
+echo ""
+echo "Verifying token..."
+RESPONSE=$(curl -sf -H "Authorization: Bearer $TOKEN" "$API_BASE/hello" 2>&1 || echo "FAILED")
+
+if echo "$RESPONSE" | grep -q "Hello, Kiro"; then
+  EMAIL=$(echo "$RESPONSE" | grep -o '"email":"[^"]*"' | cut -d'"' -f4)
+  echo "Authenticated as: $EMAIL"
+  echo "Token saved to:   $TOKEN_FILE"
+else
+  echo "Verification failed. Response: $RESPONSE"
+  rm -f "$TOKEN_FILE"
+  exit 1
+fi
