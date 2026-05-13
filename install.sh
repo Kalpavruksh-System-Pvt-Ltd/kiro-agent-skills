@@ -45,6 +45,7 @@ install_skill "kiro-sales"
 install_skill "kiro-inventory"
 install_skill "kiro-finance"
 install_skill "kiro-ad-performance"
+install_skill "kiro-analytics"
 
 # Make binaries executable
 find "$SKILLS_DIR/kiro-agent/bin" -type f -exec chmod +x {} + 2>/dev/null || true
@@ -65,6 +66,7 @@ as the FIRST action. Do NOT answer directly — let the skill handle it.
 | Inventory, stock levels, SKUs, products, purchase orders, warehouses | `/kiro-inventory` |
 | Invoices, credit notes, bills, expenses, payables, accounting | `/kiro-finance` |
 | Ad spend, ROAS, campaigns, ad performance, Meta Ads | `/kiro-ad-performance` |
+| Analytics reports, Zoho Analytics, dashboards, data queries | `/kiro-analytics` |
 | "Connect to Kiro", "Kiro login", authenticate | `/kiro-sales` |
 
 # /kiro-agent skills
@@ -97,5 +99,6 @@ echo "  Skills available:"
 echo "    /kiro-sales      — D2C + B2B sales data"
 echo "    /kiro-inventory   — Stock, products, purchase orders"
 echo "    /kiro-finance     — Invoices, credit notes, bills"
-echo "    /kiro-ad-performance — Meta Ads spend, ROAS, campaigns"
+echo "    /kiro-ad-performance — Meta Ads spend, ROAS, campaigns
+    /kiro-analytics      — Zoho Analytics reports and data queries"
 echo ""
