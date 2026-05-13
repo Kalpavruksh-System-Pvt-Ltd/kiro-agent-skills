@@ -51,6 +51,19 @@ If it failed, show the error and stop.
 Use `Authorization: Bearer $TOKEN` on all API calls to `$API_BASE`.
 Zoho dates use `YYYY-MM-DD` format.
 
+### Date rules
+
+1. **Maximum 15-day window** — never query more than 15 days of data in a single request.
+2. **Always display the date range** — before showing results, print:
+   `Date range: <start_date> to <end_date> (X days)`
+3. **User provides a date** — treat it as the **end date**; compute start date as 15 days prior.
+   Example: user says "May 10" → end = 2026-05-10, start = 2026-04-25.
+4. **No date provided** — default end = today, start = today minus 15 days.
+5. **Validate dates** before making any API call:
+   - Must be a real calendar date (no Feb 30, no month 13, etc.).
+   - Must not be in the future (relative to today).
+   - If invalid, tell the user why and ask for a corrected date. Do NOT call the API.
+
 ### Available endpoints
 
 | Endpoint | Description |
