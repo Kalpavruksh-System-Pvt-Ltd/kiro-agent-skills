@@ -100,7 +100,6 @@ Returns:
       "caption": "Loving the new @kirobeauty glow serum...",
       "media_type": "IMAGE",
       "media_url": "https://...",
-      "thumbnail_url": null,
       "permalink": "https://www.instagram.com/p/...",
       "timestamp": "2026-05-13T18:22:14+0000",
       "like_count": 142,
