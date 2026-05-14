@@ -222,6 +222,21 @@ Notes on the response:
 - "Latest UGC on #kiroskincare" →
   `GET /instagram/hashtag-posts?tags=kiroskincare&period=recent&limit=50`
 
+### Broadening axes (when the first call misses)
+
+When the universal "stop and check in" rule from `~/.claude/CLAUDE.md` fires
+on an empty result here, these are the axes worth offering the user — pick
+one with them rather than sweeping all of them:
+
+- Different hashtags
+- Wider keyword list
+- `period=top` instead of `recent`
+- Higher `limit`
+- Switching from `/hashtag-posts` to `/instagram/tags` (or vice versa)
+- Direct handle lookup via `/instagram/business-discovery`
+- Going beyond the recent window (note: `/tags` caps at ~10–12 days; older
+  mentions aren't reachable via these endpoints)
+
 ### Display guidelines
 
 - Always print a summary line first:

@@ -71,6 +71,23 @@ as the FIRST action. Do NOT answer directly — let the skill handle it.
 | Instagram posts, IG mentions, hashtag scan, UGC, influencer mentions | `/kiro-instagram-mentions` |
 | "Connect to Kiro", "Kiro login", authenticate | `/kiro-sales` |
 
+## Investigation discipline (all kiro-* skills)
+
+Kiro skills wrap live business APIs and can rack up round-trips fast.
+Default to a tight, human-in-the-loop loop:
+
+1. **One API call per turn by default.** Pick the most likely endpoint and
+   parameters for the user's question, run it once, present the result.
+2. **If the first call returns nothing useful (zero results, ambiguous, or
+   off-topic), stop and ask the user before broadening.** List the available
+   broadening axes (date range, filters, alternate endpoint, etc.) and let
+   them pick — do not sweep through them silently.
+3. **Cap at 3 API calls per turn without checking in**, even when the user
+   has approved broadening. If you're paginating or scanning a window,
+   summarize coverage and confirm before continuing.
+4. **Never run an unbounded loop** (e.g., paginating "until you find it")
+   without first telling the user the expected work and getting a go-ahead.
+
 # /kiro-agent skills
 BLOCK
 )
