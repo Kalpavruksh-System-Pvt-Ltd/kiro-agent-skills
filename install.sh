@@ -76,15 +76,24 @@ BLOCK
 )
 
 if [ ! -f "$CLAUDE_MD" ]; then
-  echo "$KIRO_SECTION" > "$CLAUDE_MD"
+  printf '%s\n' "$KIRO_SECTION" > "$CLAUDE_MD"
   ok "Created ~/.claude/CLAUDE.md with kiro skill routing"
 elif grep -q "$KIRO_BLOCK_START" "$CLAUDE_MD"; then
-  # Replace existing block
-  awk -v start="$KIRO_BLOCK_START" -v end="$KIRO_BLOCK_END" -v new="$KIRO_SECTION" '
-    $0 == start { skip=1; printed=1; print new; next }
-    $0 == end   { skip=0; next }
-    !skip       { print }
+  # Replace existing block. Use a temp file for the section payload because
+  # macOS (BSD) awk rejects newlines inside -v values.
+  SECTION_FILE=$(mktemp)
+  printf '%s\n' "$KIRO_SECTION" > "$SECTION_FILE"
+  awk -v start="$KIRO_BLOCK_START" -v end="$KIRO_BLOCK_END" -v sectionfile="$SECTION_FILE" '
+    $0 == start {
+      while ((getline line < sectionfile) > 0) print line
+      close(sectionfile)
+      skip=1
+      next
+    }
+    $0 == end { skip=0; next }
+    !skip     { print }
   ' "$CLAUDE_MD" > "$CLAUDE_MD.tmp" && mv "$CLAUDE_MD.tmp" "$CLAUDE_MD"
+  rm -f "$SECTION_FILE"
   ok "Updated kiro skill routing in ~/.claude/CLAUDE.md"
 else
   # Append
