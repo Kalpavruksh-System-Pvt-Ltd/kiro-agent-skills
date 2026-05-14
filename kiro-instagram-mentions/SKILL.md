@@ -66,13 +66,50 @@ Don't query more than ~5 hashtags in a single call — the Meta Graph API caps
 hashtag lookups at 30 unique tags per 7 days per IG user, so keep the list small
 and reuse it across calls.
 
-### Available endpoint
+### Available endpoints
 
-| Endpoint | Description |
-|---|---|
-| `GET /instagram/hashtag-posts` | Recent or top public posts under given hashtags, optionally caption-filtered by keywords |
+| Endpoint | Description | Includes poster handle? |
+|---|---|---|
+| `GET /instagram/tags` | Posts where `@kirobeauty` is photo- or product-tagged | **Yes** — `username` of poster |
+| `GET /instagram/hashtag-posts` | Recent or top public posts under given hashtags, optionally caption-filtered by keywords | No — Meta strips owner identity from hashtag discovery |
+
+**Which one to call?**
+- For outreach / influencer discovery / "who's mentioning us" → `/instagram/tags` (high signal, handle included).
+- For broader trend listening / "what's the conversation around our brand" → `/instagram/hashtag-posts` (wider net, anonymous).
 
 ### Endpoint details
+
+**GET /instagram/tags**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `limit` | 1–50 | 25 | Max number of tagged posts to return, newest first |
+
+Returns:
+
+```json
+{
+  "count": 3,
+  "posts": [
+    {
+      "id": "17877757803597776",
+      "username": "next.door.diva",
+      "caption": "Let's try out the kirobeauty waterproof soft matte eyeliner pen...",
+      "media_type": "VIDEO",
+      "media_url": "https://...",
+      "permalink": "https://www.instagram.com/reel/DYUeZJki-CQ/",
+      "timestamp": "2026-05-14T13:05:27+0000",
+      "like_count": 11,
+      "comments_count": 1
+    }
+  ]
+}
+```
+
+Notes:
+- `username` is the poster's Instagram handle — usable directly for outreach.
+- `like_count` may be `null` on some media types (carousel albums, some reels) — Meta returns it inconsistently.
+- Captions include product mentions and hashtags they used — useful context for outreach.
 
 **GET /instagram/hashtag-posts**
 
@@ -119,7 +156,9 @@ Notes on the response:
 
 ### Query patterns
 
-- "Find IG posts mentioning Kiro" →
+- "Who's tagging Kiro lately" / "Recent influencer mentions" →
+  `GET /instagram/tags?limit=25`
+- "Find IG posts mentioning Kiro" (broad listening, no handles) →
   `GET /instagram/hashtag-posts?tags=kirobeauty,kiro,kiroskincare&keywords=kiro`
 - "Top posts under #kirobeauty this week" →
   `GET /instagram/hashtag-posts?tags=kirobeauty&period=top&limit=25`
@@ -143,9 +182,10 @@ Notes on the response:
 
 ### Limits and caveats
 
-- Only **public** posts are visible to the Hashtag Search API. Private accounts and Stories are excluded.
-- Meta caps hashtag lookups at **30 unique hashtags per 7 days** per IG user. Reuse the same tag set across calls.
-- This skill does not surface @-mentions of `@kirobeauty` — only hashtag-driven discovery. If the user wants @-mentions, tell them that's a future capability and offer the closest hashtag-based proxy (e.g., `#kirobeauty`).
+- **Hashtag posts are anonymous by design.** Meta's Hashtag Search API strips owner identity (no username, no profile picture) to protect privacy. To get the poster's handle, use `/instagram/tags` instead.
+- Only **public** posts are visible to either endpoint. Private accounts and Stories are excluded.
+- Hashtag lookups are capped at **30 unique hashtags per 7 days** per IG user. Reuse the same tag set across calls.
+- `/instagram/tags` only catches posts where someone explicitly photo- or product-tagged `@kirobeauty`. Caption-level @-mentions without a tag are not returned by this endpoint (would require Meta webhooks).
 
 When the user asks for ad performance, sales, inventory, or finance data, suggest
 `/kiro-ad-performance`, `/kiro-sales`, `/kiro-inventory`, or `/kiro-finance` instead.
