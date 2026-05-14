@@ -70,7 +70,8 @@ and reuse it across calls.
 
 | Endpoint | Description | Includes poster handle? |
 |---|---|---|
-| `GET /instagram/tags` | Posts where `@kirobeauty` is photo- or product-tagged | **Yes** — `username` of poster |
+| `GET /instagram/tags` | Posts where `@kirobeauty` is photo- or product-tagged. Auto-enriches each with follower count, bio, etc. | **Yes** — `username` + full `poster` profile |
+| `GET /instagram/business-discovery` | Bulk lookup: given a list of IG handles, returns follower count, display name, bio, website | n/a — input is handles |
 | `GET /instagram/hashtag-posts` | Recent or top public posts under given hashtags, optionally caption-filtered by keywords | No — Meta strips owner identity from hashtag discovery |
 
 **Which one to call?**
@@ -84,12 +85,14 @@ and reuse it across calls.
 | Param | Type | Default | Description |
 |---|---|---|---|
 | `limit` | 1–50 | 25 | Max number of tagged posts to return, newest first |
+| `enrich` | `true\|false` | `true` | When true, each post is enriched with poster profile data (followers, bio, etc.) via Business Discovery. Set `false` to skip the extra Meta calls if you only need post content. |
 
 Returns:
 
 ```json
 {
   "count": 3,
+  "enriched": true,
   "posts": [
     {
       "id": "17877757803597776",
@@ -100,7 +103,16 @@ Returns:
       "permalink": "https://www.instagram.com/reel/DYUeZJki-CQ/",
       "timestamp": "2026-05-14T13:05:27+0000",
       "like_count": 11,
-      "comments_count": 1
+      "comments_count": 1,
+      "poster": {
+        "username": "next.door.diva",
+        "name": "Sonicka | Eye Makeup & Beauty",
+        "followers_count": 65629,
+        "media_count": 879,
+        "profile_picture_url": "https://...",
+        "biography": "Eyeshadow Tutorials, Swatches & reviews \nDM/E-mail on sonicka@bluboxtalents.com",
+        "website": "https://linktr.ee/next.door.diva"
+      }
     }
   ]
 }
@@ -108,8 +120,47 @@ Returns:
 
 Notes:
 - `username` is the poster's Instagram handle — usable directly for outreach.
+- `poster` is `null` for personal (non-Business/Creator) accounts; Meta only exposes Business Discovery data for Business and Creator profiles.
+- `poster.biography` and `poster.website` are optional — some creators leave them blank.
 - `like_count` may be `null` on some media types (carousel albums, some reels) — Meta returns it inconsistently.
-- Captions include product mentions and hashtags they used — useful context for outreach.
+
+**GET /instagram/business-discovery**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `handles` | csv | required | Comma-separated IG handles to look up, e.g. `next.door.diva,aarohi.erra_`. Leading `@` is optional. Up to 50. |
+
+Returns:
+
+```json
+{
+  "count": 2,
+  "resolved": 2,
+  "profiles": [
+    {
+      "requested_handle": "next.door.diva",
+      "profile": {
+        "username": "next.door.diva",
+        "name": "Sonicka | Eye Makeup & Beauty",
+        "followers_count": 65629,
+        "media_count": 879,
+        "profile_picture_url": "https://...",
+        "biography": "...",
+        "website": "https://linktr.ee/next.door.diva"
+      }
+    },
+    {
+      "requested_handle": "aarohi.erra_",
+      "profile": { "username": "aarohi.erra_", "name": "Aarohi | Glow Diaries", "followers_count": 23, "media_count": 23 }
+    }
+  ]
+}
+```
+
+Notes:
+- `profile` is `null` for handles that don't exist or aren't Business/Creator accounts.
+- `resolved` tells you how many of the requested handles came back with profiles.
+- Use this when you already have a list of creators you want to vet (e.g., from manual research or a prior `/instagram/tags` result).
 
 **GET /instagram/hashtag-posts**
 
@@ -158,6 +209,10 @@ Notes on the response:
 
 - "Who's tagging Kiro lately" / "Recent influencer mentions" →
   `GET /instagram/tags?limit=25`
+- "How big are the accounts mentioning us" / "Followers of recent taggers" →
+  `GET /instagram/tags?limit=25` (poster.followers_count is included by default)
+- "Look up follower counts for these handles" →
+  `GET /instagram/business-discovery?handles=h1,h2,h3`
 - "Find IG posts mentioning Kiro" (broad listening, no handles) →
   `GET /instagram/hashtag-posts?tags=kirobeauty,kiro,kiroskincare&keywords=kiro`
 - "Top posts under #kirobeauty this week" →
