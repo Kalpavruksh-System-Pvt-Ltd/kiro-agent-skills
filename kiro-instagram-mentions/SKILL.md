@@ -72,11 +72,13 @@ and reuse it across calls.
 |---|---|---|
 | `GET /instagram/tags` | Posts where `@kirobeauty` is photo- or product-tagged. Auto-enriches each with follower count, bio, etc. | **Yes** — `username` + full `poster` profile |
 | `GET /instagram/business-discovery` | Bulk lookup: given a list of IG handles, returns follower count, display name, bio, website | n/a — input is handles |
+| `GET /instagram/insights` | Kiro's own posts with full Meta insights: impressions, reach, saves, shares, plays | n/a — Kiro's own media |
 | `GET /instagram/hashtag-posts` | Recent or top public posts under given hashtags, optionally caption-filtered by keywords | No — Meta strips owner identity from hashtag discovery |
 
 **Which one to call?**
 - For outreach / influencer discovery / "who's mentioning us" → `/instagram/tags` (high signal, handle included).
 - For broader trend listening / "what's the conversation around our brand" → `/instagram/hashtag-posts` (wider net, anonymous).
+- For performance of Kiro's own content / "how are our posts doing" → `/instagram/insights` (saves, shares, reach, plays).
 
 ### Endpoint details
 
@@ -162,6 +164,52 @@ Notes:
 - `resolved` tells you how many of the requested handles came back with profiles.
 - Use this when you already have a list of creators you want to vet (e.g., from manual research or a prior `/instagram/tags` result).
 
+**GET /instagram/insights**
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `limit` | 1–50 | 10 | Number of Kiro's most recent posts to fetch insights for |
+
+Returns:
+
+```json
+{
+  "count": 3,
+  "posts": [
+    {
+      "id": "17900000000000001",
+      "caption": "Our new glow serum is here ✨...",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "media_url": "https://...",
+      "permalink": "https://www.instagram.com/reel/...",
+      "timestamp": "2026-05-18T10:30:00+0000",
+      "like_count": 342,
+      "comments_count": 28,
+      "insights": {
+        "impressions": 15420,
+        "reach": 12800,
+        "saved": 89,
+        "total_interactions": 510,
+        "likes": 342,
+        "comments": 28,
+        "shares": 51,
+        "plays": 9800,
+        "ig_reels_aggregated_all_plays_count": 11200
+      }
+    }
+  ]
+}
+```
+
+Notes:
+- `insights` contains metrics from Meta's Media Insights API. Available metrics vary by `media_type`:
+  - **IMAGE / CAROUSEL_ALBUM**: impressions, reach, saved, total_interactions, likes, comments, shares
+  - **VIDEO (reels)**: all of the above + plays, ig_reels_aggregated_all_plays_count
+- `insights` may be `{}` if the post is too old or Meta doesn't support insights for that media type.
+- `media_product_type` distinguishes reels (`REELS`) from feed videos (`FEED`), stories (`STORY`), etc.
+- This only works for **Kiro's own posts** — not third-party posts. For influencer post insights, the creator must enable Branded Content partnership.
+
 **GET /instagram/hashtag-posts**
 
 | Param | Type | Default | Description |
@@ -207,6 +255,10 @@ Notes on the response:
 
 ### Query patterns
 
+- "How are our recent posts performing" / "Reach and saves on our posts" →
+  `GET /instagram/insights?limit=10`
+- "Insights on our last 25 posts" →
+  `GET /instagram/insights?limit=25`
 - "Who's tagging Kiro lately" / "Recent influencer mentions" →
   `GET /instagram/tags?limit=25`
 - "How big are the accounts mentioning us" / "Followers of recent taggers" →
