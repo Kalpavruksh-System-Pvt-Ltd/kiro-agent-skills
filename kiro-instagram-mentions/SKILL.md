@@ -187,15 +187,13 @@ Returns:
       "like_count": 342,
       "comments_count": 28,
       "insights": {
-        "impressions": 15420,
         "reach": 12800,
         "saved": 89,
         "total_interactions": 510,
         "likes": 342,
         "comments": 28,
         "shares": 51,
-        "plays": 9800,
-        "ig_reels_aggregated_all_plays_count": 11200
+        "views": 11200
       }
     }
   ]
@@ -203,9 +201,10 @@ Returns:
 ```
 
 Notes:
-- `insights` contains metrics from Meta's Media Insights API. Available metrics vary by `media_type`:
-  - **IMAGE / CAROUSEL_ALBUM**: impressions, reach, saved, total_interactions, likes, comments, shares
-  - **VIDEO (reels)**: all of the above + plays, ig_reels_aggregated_all_plays_count
+- `insights` contains metrics from Meta's Media Insights API. Available metrics vary by `media_product_type`:
+  - **FEED** (images, carousels): reach, saved, total_interactions, likes, comments, shares
+  - **REELS**: all of the above + views (total play count)
+  - **STORY**: reach, replies
 - `insights` may be `{}` if the post is too old or Meta doesn't support insights for that media type.
 - `media_product_type` distinguishes reels (`REELS`) from feed videos (`FEED`), stories (`STORY`), etc.
 - This only works for **Kiro's own posts** — not third-party posts. For influencer post insights, the creator must enable Branded Content partnership.
