@@ -52,9 +52,13 @@ Use `Authorization: Bearer $TOKEN` on all API calls to `$API_BASE`.
 
 ### Workflow
 
-Always follow this two-step pattern:
+**For asset/structure questions** (dependencies, duplicates, workspace overview):
+1. Call `GET /zoho/analytics/assets` — returns the full workspace map in one call.
+2. Use `summary.by_type` for composition, `dependencies` for lineage, `duplicates` for cleanup.
+3. To drill into a specific view's data, follow up with `GET /zoho/analytics/views/:viewId/data`.
 
-1. **Find the right view** — call `GET /zoho/analytics/views` with a `search=` term to find relevant reports/tables.
+**For data queries** (fetching rows from a specific report/table):
+1. **Find the right view** — call `GET /zoho/analytics/views` with a `search=` term.
 2. **Fetch the data** — call `GET /zoho/analytics/views/:viewId/data` using the `id` from step 1.
 
 Never guess a `viewId` — always look it up first.
@@ -63,10 +67,25 @@ Never guess a `viewId` — always look it up first.
 
 | Endpoint | Description |
 |---|---|
+| `GET /zoho/analytics/assets` | Full workspace map: all views, dependency graph, duplicate detection |
 | `GET /zoho/analytics/views` | List all reports and tables in the workspace |
 | `GET /zoho/analytics/views/:viewId/data` | Fetch all rows from a specific view |
 
 ### Endpoint details
+
+**GET /zoho/analytics/assets**
+
+| Param | Type | Description |
+|---|---|---|
+| `refresh` | `true` | Force a fresh fetch, bypassing the 1-hour cache |
+
+Returns: `workspace_id`, `fetched_at`, `summary` (total count + breakdown by type), `views[]` (each with `id`, `name`, `type`, `description`, `created_by`, `created_at`, `modified_at`, `depends_on[]`), `dependencies[]` (edges with `from`, `from_name`, `to`, `to_name`, `relationship`), `duplicates[]` (groups of views with identical names).
+
+Use this endpoint to:
+- Understand what's in the workspace and how it's organized
+- Trace which queries/tables feed into a dashboard or report
+- Find duplicate or redundant reports and queries for cleanup
+- Get a bird's-eye view before drilling into specific data
 
 **GET /zoho/analytics/views**
 
@@ -90,6 +109,10 @@ Returns: `column_count`, `row_count`, `columns[]`, `rows[]` — rows are objects
 
 ### Query patterns
 
+- "What's in our analytics workspace?" → `GET /zoho/analytics/assets`
+- "What reports depend on the orders query?" → `GET /zoho/analytics/assets` → filter `dependencies` where `to_name` contains "orders"
+- "Are there duplicate reports?" → `GET /zoho/analytics/assets` → check `duplicates` array
+- "Which queries feed the Sales Dashboard?" → `GET /zoho/analytics/assets` → filter `dependencies` where `from_name` = "Sales Dashboard"
 - "What analytics reports do we have?" → `GET /zoho/analytics/views?type=Dashboard`
 - "Show me the Kiro orders table" → `GET /zoho/analytics/views?search=kiro+orders`, then fetch data from the matching Table
 - "What data is in the discount report?" → search for "discount", pick the right view, fetch data
